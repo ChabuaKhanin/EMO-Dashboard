@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMO Hub Wise - Command Center</title>
+    
+    <!-- Tailwind CSS with Dark Mode -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            950: '#060a12',
+                            900: '#0b1220',
+                            850: '#0f172a',
+                            800: '#141f36',
+                            700: '#1e2d4d'
+                        },
+                        neon: {
+                            cyan: '#06b6d4',
+                            blue: '#3b82f6',
+                            amber: '#f59e0b',
+                            rose: '#f43f5e',
+                            emerald: '#10b981'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- React, ReactDOM, Babel & PapaParse -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #060a12;
+            color: #f1f5f9;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .font-mono-num {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Dark Sleek Scrollbars */
+        ::-webkit-scrollbar,
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track,
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0b1220;
+        }
+        ::-webkit-scrollbar-thumb,
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 9999px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        ::-webkit-scrollbar-thumb:hover,
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Glowing Row Hover */
+        .cyber-row {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .cyber-row:hover {
+            background: rgba(30, 41, 59, 0.75) !important;
+        }
+        .cyber-row:hover td.sticky-col {
+            background: #0f172a !important;
+        }
+
+        /* Critical Pulse on Hubs */
+        .critical-glow {
+            background: rgba(244, 63, 94, 0.08) !important;
+            border-left: 3px solid #f43f5e;
+        }
+        .critical-glow td.sticky-col {
+            background: #141320 !important;
+        }
+
+        /* Sticky Column Shadow styling for Dark Mode */
+        .sticky-col {
+            box-shadow: 4px 0 16px rgba(0, 0, 0, 0.45);
+        }
+    </style>
+</head>
+<body class="selection:bg-cyan-500/30 selection:text-cyan-200 antialiased">
+
+    <!-- Deep Ambient Cyber Backdrop -->
+    <div class="fixed inset-0 z-[-1] pointer-events-none">
+        <div class="absolute inset-0 bg-[#060a12]"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(6,182,212,0.12),transparent_70%)]"></div>
+        <div class="absolute bottom-0 right-0 w-[50vw] h-[50vw] bg-[radial-gradient(circle,rgba(59,130,246,0.06),transparent_60%)]"></div>
+        <!-- Grid Pattern Overlay -->
+        <div class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b1a_1px,transparent_1px),linear-gradient(to_bottom,#1e293b1a_1px,transparent_1px)] bg-[size:36px_36px] opacity-40"></div>
+    </div>
+
+    <!-- Application Root -->
+    <div id="root" class="relative z-10 p-3 sm:p-5 lg:p-7 max-w-[1720px] mx-auto min-h-screen space-y-4"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect, useRef } = React;
+
+        // --- Custom SVG Icons ---
+        const PulseIcon = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>;
+        const Search = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>;
+        const Clock = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+        const Trophy = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>;
+        const TrendingUp = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>;
+        const RefreshCw = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>;
+        const TargetIcon = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
+        const CalendarIcon = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
+        const ArrowUpDown = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg>;
+        const ChevronDown = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m6 9 6 6 6-6"/></svg>;
+        const ChevronUp = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m18 15-6-6-6 6"/></svg>;
+        const AlertCircle = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><line x1="12" x2="8" y1="8" y2="12"/><line x1="12.01" y1="16" x2="12.01" y2="16"/></svg>;
+        const TvIcon = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>;
+
+        const formatNumber = (num) => new Intl.NumberFormat('en-IN').format(num || 0);
+        const formatPercent = (num) => `${(num || 0).toFixed(2)}%`;
+
+        const parseNum = (val) => parseFloat((val || '0').toString().replace(/,/g, '')) || 0;
+        const parsePct = (val) => {
+            if (val === null || val === undefined) return 0;
+            let str = val.toString().trim();
+            if (!str || str === '-' || str === '#N/A' || str === '#VALUE!') return 0;
+            const hasPercentSign = str.includes('%');
+            let num = parseFloat(str.replace(/[%,\s]/g, '')) || 0;
+            // Handle decimal format from Google Sheets (e.g. 0.4754 -> 47.54%)
+            if (!hasPercentSign && num > 0 && num <= 1) {
+                num = num * 100;
+            }
+            return Math.round(num * 100) / 100;
+        };
+
+        const extractDayNumber = (val) => {
+            if (val === null || val === undefined) return null;
+            let str = val.toString().trim();
+            if (!str) return null;
+
+            // GViz Date format: Date(2026,8,4)
+            const gvizMatch = str.match(/Date\(\d+,\s*\d+,\s*(\d+)\)/i);
+            if (gvizMatch) return parseInt(gvizMatch[1], 10);
+
+            // Standard YYYY-MM-DD or YYYY/MM/DD
+            const ymd = str.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+            if (ymd) return parseInt(ymd[3], 10);
+
+            // Standard DD-MM-YYYY or DD/MM/YYYY or DD.MM.YYYY
+            const dmy = str.match(/^(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{2,4})/);
+            if (dmy) {
+                const d = parseInt(dmy[1], 10);
+                if (d >= 1 && d <= 31) return d;
+            }
+
+            // DD-MMM format: e.g. 04-Sep, 4 Sep 2026
+            const monthMatch = str.match(/^(\d{1,2})[\/\-\s]+([A-Za-z]{3})/);
+            if (monthMatch) {
+                const d = parseInt(monthMatch[1], 10);
+                if (d >= 1 && d <= 31) return d;
+            }
+
+            return null;
+        };
+
+        // Globally accessible velocity computation engine
+        const computeVelocity = (hub) => {
+            if (!hub || !hub.ofd || hub.ofd === 0) return '-';
+            const emo10 = parseFloat(hub.emo10am) || 0;
+
+            // Strict operational classification based on 10 AM EMO milestone:
+            // 1. Target Met (Green): 10 AM EMO >= 95%
+            if (emo10 >= 95) return 'Target Met';
+            // 2. On Track (Cyan): 10 AM EMO between 75% and 94.99%
+            if (emo10 >= 75) return 'On Track';
+            // 3. Moderate (Amber): 10 AM EMO between 50% and 74.99%
+            if (emo10 >= 50) return 'Moderate';
+            // 4. High Risk (Red): 10 AM EMO < 50%
+            return 'High Risk';
+        };
+
+        const ALL_19_HUBS = [
+            'AmbikapurMDH_DMM',
+            'ChabuaHub_CHB',
+            'ChabuaMDH_CHA',
+            'ChapakhowaHub_CPK',
+            'DigboiODH_MRG',
+            'DikomMDH_DIB',
+            'DuliajanHub_DLN',
+            'ETASHDibrugarhODH_DIB',
+            'ETASHDoomDoomaODH_DMM',
+            'JagunMDH_MRG',
+            'MakumhubHub_TSK',
+            'MargheritaHub_MRG',
+            'MonkhooliMDH_TSK',
+            'NaharkatiyaHub_NHK',
+            'NamrupHub_NAM',
+            'PanitolaMDH_TSK',
+            'PengeriMDH_MRG',
+            'TalapMDH_DMM',
+            'TinsukiaHub_TSK'
+        ];
+
+        const createEmptyHubRecords = (dayNum) => {
+            return ALL_19_HUBS.map((hubName, idx) => ({
+                id: `empty-${dayNum}-${idx}`,
+                hub: hubName,
+                ofd: 0,
+                gap12pm: 0,
+                velocity: '-',
+                cumOfd8am: 0,
+                cumOfd10am: 0,
+                cumOfd12pm: 0,
+                ofd7am: 0, emo7am: 0,
+                ofd8am: 0, emo8am: 0,
+                ofd9am: 0, emo9am: 0,
+                ofd10am: 0, emo10am: 0,
+                ofd12pm: 0, emo12pm: 0,
+                ofd2pm: 0, emo2pm: 0,
+                ofd4pm: 0, emo4pm: 0,
+                ofdafter4pm: 0, emoafter4pm: 0
+            }));
+        };
+
+        const HubDetailModal = ({ hub, onClose }) => {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+
+            useEffect(() => {
+                if (chartRef.current && hub) {
+                    const ctx = chartRef.current.getContext('2d');
+                    if (chartInstance.current) chartInstance.current.destroy();
+
+                    Chart.defaults.color = '#94a3b8';
+                    Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+                    chartInstance.current = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['7AM', '8AM', '9AM', '10AM', '12PM', '2PM', '4PM', 'After 4PM'],
+                            datasets: [{
+                                label: 'EMO %',
+                                data: [
+                                    hub.emo7am || 0,
+                                    hub.emo8am || 0,
+                                    hub.emo9am || 0,
+                                    hub.emo10am || 0,
+                                    hub.emo12pm || 0,
+                                    hub.emo2pm || 0,
+                                    hub.emo4pm || 0,
+                                    hub.emoafter4pm || 0
+                                ],
+                                borderColor: '#06b6d4',
+                                backgroundColor: 'rgba(6, 182, 212, 0.12)',
+                                borderWidth: 3,
+                                pointBackgroundColor: '#06b6d4',
+                                pointBorderColor: '#0f172a',
+                                pointBorderWidth: 2,
+                                pointRadius: 6,
+                                fill: true,
+                                tension: 0.35
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: '#0f172a',
+                                    borderColor: '#1e293b',
+                                    borderWidth: 1,
+                                    titleColor: '#f1f5f9',
+                                    bodyColor: '#38bdf8',
+                                    callbacks: { label: (c) => ` EMO: ${c.parsed.y}%` }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 100,
+                                    grid: { color: 'rgba(255,255,255,0.06)' },
+                                    ticks: { color: '#64748b' }
+                                },
+                                x: {
+                                    grid: { display: false },
+                                    ticks: { color: '#94a3b8' }
+                                }
+                            }
+                        }
+                    });
+                }
+                return () => {
+                    if (chartInstance.current) chartInstance.current.destroy();
+                };
+            }, [hub]);
+
+            if (!hub) return null;
+
+            return (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+                    <div className="relative bg-[#0c1322] border border-slate-800 rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden animate-fade-in">
+                        <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-[#0e172a]">
+                            <div>
+                                <h3 className="text-xl font-bold text-white flex items-center gap-2 m-0">
+                                    <span className="text-cyan-400 font-mono-num">{hub.hub}</span>
+                                </h3>
+                                <p className="text-xs text-slate-400 mt-1">EMO Run-rate & Target Gap Analysis</p>
+                            </div>
+                            <button onClick={onClose} className="p-2 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-6">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div className="bg-[#131d33] border border-slate-800/80 p-3.5 rounded-2xl">
+                                    <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total OFD</div>
+                                    <div className="text-xl font-extrabold text-white font-mono-num mt-1">{formatNumber(hub.ofd)}</div>
+                                </div>
+                                <div className="bg-[#131d33] border border-slate-800/80 p-3.5 rounded-2xl">
+                                    <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">10 AM EMO</div>
+                                    <div className={`text-xl font-extrabold font-mono-num mt-1 ${hub.emo10am >= 95 ? 'text-emerald-400' : hub.emo10am < 50 ? 'text-rose-400' : 'text-amber-400'}`}>
+                                        {formatPercent(hub.emo10am)}
+                                    </div>
+                                </div>
+                                <div className="bg-[#131d33] border border-slate-800/80 p-3.5 rounded-2xl">
+                                    <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">12 PM 95% Gap</div>
+                                    <div className={`text-xl font-extrabold font-mono-num mt-1 ${hub.gap12pm === 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                        {hub.gap12pm === 0 ? '✓ Met' : `+${formatNumber(hub.gap12pm)}`}
+                                    </div>
+                                </div>
+                                <div className="bg-[#131d33] border border-slate-800/80 p-3.5 rounded-2xl">
+                                    <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Velocity</div>
+                                    <div className="mt-1">
+                                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                                            hub.velocity === 'Target Met' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                                            hub.velocity === 'On Track' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' :
+                                            'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                        }`}>
+                                            {hub.velocity}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="h-64 bg-[#090e1a] p-4 rounded-2xl border border-slate-800/70">
+                                <canvas ref={chartRef}></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        function HubEMODashboard() {
+            const [selectedDay, setSelectedDay] = useState(null);
+            const [dataByDay, setDataByDay] = useState({});
+            const [tableData, setTableData] = useState([]);
+            const [sheetActiveDate, setSheetActiveDate] = useState('');
+            const [isFetching, setIsFetching] = useState(true);
+            const [lastUpdated, setLastUpdated] = useState('');
+            const [searchTerm, setSearchTerm] = useState('');
+            const [sortConfig, setSortConfig] = useState(null);
+            const [quickFilter, setQuickFilter] = useState('ALL');
+            const [selectedHub, setSelectedHub] = useState(null);
+            const [isTvMode, setIsTvMode] = useState(false);
+            const [isAutoScrolling, setIsAutoScrolling] = useState(true);
+            const [currentTime, setCurrentTime] = useState('');
+            const tvScrollRef = useRef(null);
+
+            // Dynamic time slots list supporting 4PM and After 4PM
+            const [timeSlots, setTimeSlots] = useState([
+                { key: '7am', label: '7AM' },
+                { key: '8am', label: '8AM' },
+                { key: '9am', label: '9AM' },
+                { key: '10am', label: '10AM' },
+                { key: '12pm', label: '12PM' },
+                { key: '2pm', label: '2PM' },
+                { key: '4pm', label: '4PM' },
+                { key: 'after4pm', label: 'After 4PM' }
+            ]);
+
+            const sheetDayNumber = useMemo(() => extractDayNumber(sheetActiveDate), [sheetActiveDate]);
+
+            const fetchSheetData = () => {
+                setIsFetching(true);
+                const sheetId = '1AAK0GM4NzmpdLCvbHUFd8bQMJyWIffXW5PNBuRU4Xsk';
+                const gidEmoTable = '288293857';
+                const gidEmo2026 = '1258895057';
+
+                const urlEmoTable = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gidEmoTable}&t=${Date.now()}`;
+                const urlEmo2026 = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gidEmo2026}&t=${Date.now()}`;
+
+                // 1. Fetch EMO Table with 100% Exact Column and Value Synchronization
+                fetch(urlEmoTable, { cache: 'no-store' })
+                    .then(res => res.text())
+                    .then(csvText => {
+                        Papa.parse(csvText, {
+                            header: false,
+                            skipEmptyLines: true,
+                            complete: (results) => {
+                                const rows = results.data;
+                                if (!rows || rows.length < 2) return;
+
+                                // Header search for real Date & active day synchronization
+                                let foundDay = null;
+                                for (let r = 0; r < Math.min(rows.length, 6); r++) {
+                                    for (let c = 0; c < (rows[r] || []).length; c++) {
+                                        const cellVal = (rows[r][c] || '').toString().trim();
+                                        const detectedDay = extractDayNumber(cellVal);
+                                        if (detectedDay !== null) {
+                                            setSheetActiveDate(cellVal);
+                                            foundDay = detectedDay;
+                                            setSelectedDay(prev => prev === null ? detectedDay : prev);
+                                            break;
+                                        }
+                                    }
+                                    if (foundDay !== null) break;
+                                }
+
+                                let headerIdx = 0;
+                                for (let i = 0; i < Math.min(rows.length, 8); i++) {
+                                    const cell = (rows[i] && rows[i][0] ? rows[i][0] : '').toString().toLowerCase().trim();
+                                    if (cell === 'hub' || cell.includes('hub') || cell.includes('location')) {
+                                        headerIdx = i;
+                                        break;
+                                    }
+                                }
+
+                                const hRow = rows[headerIdx] || [];
+                                const prevHRow = headerIdx > 0 ? (rows[headerIdx - 1] || []) : [];
+                                const maxCols = Math.max(hRow.length, prevHRow.length);
+
+                                // Exact baseline standard mapping in EMO Table
+                                const slotMap = {
+                                    '7am': { ofd: 2, emo: 3 },
+                                    '8am': { ofd: 4, emo: 5 },
+                                    '9am': { ofd: 6, emo: 7 },
+                                    '10am': { ofd: 8, emo: 9 },
+                                    '12pm': { ofd: 10, emo: 11 },
+                                    '2pm': { ofd: 12, emo: 13 },
+                                    '4pm': { ofd: 14, emo: 15 },
+                                    'after4pm': { ofd: 16, emo: 17 }
+                                };
+
+                                let currentParent = '';
+                                for (let c = 2; c < maxCols; c++) {
+                                    const pText = (prevHRow[c] || '').toString().trim();
+                                    if (pText) currentParent = pText;
+                                    const combined = (currentParent + ' ' + (hRow[c] || '')).toLowerCase();
+
+                                    let hasPct = combined.includes('%') || combined.includes('emo');
+                                    for (let r = headerIdx + 1; r < Math.min(rows.length, headerIdx + 5); r++) {
+                                        if (rows[r] && rows[r][c] && rows[r][c].toString().includes('%')) {
+                                            hasPct = true;
+                                            break;
+                                        }
+                                    }
+
+                                    const registerCol = (slotKey) => {
+                                        if (hasPct) slotMap[slotKey].emo = c;
+                                        else slotMap[slotKey].ofd = c;
+                                    };
+
+                                    if (combined.includes('after 4') || combined.includes('> 4') || combined.includes('>4') || combined.includes('post 4')) {
+                                        registerCol('after4pm');
+                                    } else if ((combined.includes('4 pm') || combined.includes('4pm') || combined.includes('4:00')) && !combined.includes('after')) {
+                                        registerCol('4pm');
+                                    } else if (combined.includes('7 am') || combined.includes('7am') || combined.includes('7:00')) {
+                                        registerCol('7am');
+                                    } else if (combined.includes('8 am') || combined.includes('8am') || combined.includes('8:00')) {
+                                        registerCol('8am');
+                                    } else if (combined.includes('9 am') || combined.includes('9am') || combined.includes('9:00')) {
+                                        registerCol('9am');
+                                    } else if (combined.includes('10 am') || combined.includes('10am') || combined.includes('10:00')) {
+                                        registerCol('10am');
+                                    } else if (combined.includes('12 pm') || combined.includes('12pm') || combined.includes('12:00')) {
+                                        registerCol('12pm');
+                                    } else if (combined.includes('2 pm') || combined.includes('2pm') || combined.includes('2:00')) {
+                                        registerCol('2pm');
+                                    }
+                                }
+
+                                const parsedHubs = [];
+                                for (let i = headerIdx + 1; i < rows.length; i++) {
+                                    const row = rows[i];
+                                    if (!row || !row[0]) continue;
+                                    const hubName = row[0].toString().trim();
+                                    if (!hubName || hubName.toLowerCase() === 'hub' || hubName.toLowerCase().includes('total')) continue;
+
+                                    const ofd = parseNum(row[1]);
+                                    const ofd12pm = parseNum(row[slotMap['12pm'].ofd]);
+                                    const target95 = Math.ceil(ofd * 0.95);
+                                    const gap12pm = Math.max(0, target95 - ofd12pm);
+
+                                    // Direct read from EMO Table (guaranteeing exact 47.54% at 9AM, etc.)
+                                    const emo10 = parsePct(row[slotMap['10am'].emo]);
+                                    let velocity = 'High Risk';
+                                    if (emo10 >= 95) velocity = 'Target Met';
+                                    else if (emo10 >= 75) velocity = 'On Track';
+                                    else if (emo10 >= 50) velocity = 'Moderate';
+
+                                    const ofd7 = parseNum(row[slotMap['7am'].ofd]);
+                                    const ofd8 = parseNum(row[slotMap['8am'].ofd]);
+                                    const ofd9 = parseNum(row[slotMap['9am'].ofd]);
+                                    const ofd10 = parseNum(row[slotMap['10am'].ofd]);
+                                    const ofd12 = ofd12pm;
+                                    const ofd2 = parseNum(row[slotMap['2pm'].ofd]);
+                                    const ofd4 = parseNum(row[slotMap['4pm'].ofd]);
+                                    const ofdafter4 = parseNum(row[slotMap['after4pm'].ofd]);
+
+                                    const cum8 = ofd7 + ofd8;
+                                    const cum10 = cum8 + ofd9 + ofd10;
+                                    const cum12 = cum10 + ofd12;
+
+                                    parsedHubs.push({
+                                        id: `emo-tab-${i}`,
+                                        hub: hubName,
+                                        ofd,
+                                        gap12pm,
+                                        velocity,
+                                        cumOfd8am: cum8,
+                                        cumOfd10am: cum10,
+                                        cumOfd12pm: cum12,
+                                        ofd7am: ofd7, emo7am: parsePct(row[slotMap['7am'].emo]),
+                                        ofd8am: ofd8, emo8am: parsePct(row[slotMap['8am'].emo]),
+                                        ofd9am: ofd9, emo9am: parsePct(row[slotMap['9am'].emo]),
+                                        ofd10am: ofd10, emo10am: emo10,
+                                        ofd12pm: ofd12, emo12pm: parsePct(row[slotMap['12pm'].emo]),
+                                        ofd2pm: ofd2, emo2pm: parsePct(row[slotMap['2pm'].emo]),
+                                        ofd4pm: ofd4, emo4pm: parsePct(row[slotMap['4pm'].emo]),
+                                        ofdafter4pm: ofdafter4, emoafter4pm: parsePct(row[slotMap['after4pm'].emo])
+                                    });
+                                }
+
+                                setTableData(parsedHubs);
+                                setLastUpdated(new Date().toLocaleTimeString());
+                                setIsFetching(false);
+                            }
+                        });
+                    })
+                    .catch(() => setIsFetching(false));
+
+                // 2. Fetch EMO 2026
+                fetch(urlEmo2026, { cache: 'no-store' })
+                    .then(res => res.text())
+                    .then(csv => {
+                        Papa.parse(csv, {
+                            header: false,
+                            skipEmptyLines: true,
+                            complete: (res) => {
+                                const rows = res.data;
+                                if (!rows || rows.length < 2) return;
+
+                                let headerRowIdx = 0;
+                                for (let i = 0; i < Math.min(rows.length, 8); i++) {
+                                    const first = (rows[i][0] || '').toString().toLowerCase();
+                                    const second = (rows[i][1] || '').toString().toLowerCase();
+                                    if (first.includes('hub') || first.includes('location') || second.includes('hub')) {
+                                        headerRowIdx = i;
+                                        break;
+                                    }
+                                }
+
+                                const hRow = rows[headerRowIdx] || [];
+                                const totalCols = hRow.length;
+
+                                // Locate Date column
+                                let dateColIdx = 13;
+                                for (let c = 0; c < totalCols; c++) {
+                                    const colName = (hRow[c] || '').toString().toLowerCase();
+                                    if (colName.includes('date') || colName.includes('tarikh')) {
+                                        dateColIdx = c;
+                                        break;
+                                    }
+                                }
+
+                                const grouped = {};
+                                for (let i = headerRowIdx + 1; i < rows.length; i++) {
+                                    const r = rows[i];
+                                    if (!r || !r[0]) continue;
+                                    const hub = r[0].toString().trim();
+                                    if (!hub || hub.toLowerCase() === 'hub' || hub.toLowerCase().includes('total')) continue;
+
+                                    // Check dateColIdx, or scan row for a valid date
+                                    let day = extractDayNumber(r[dateColIdx]);
+                                    if (!day) {
+                                        for (let c = 0; c < r.length; c++) {
+                                            const testD = extractDayNumber(r[c]);
+                                            if (testD !== null) { day = testD; break; }
+                                        }
+                                    }
+                                    if (!day) continue;
+
+                                    if (!grouped[day]) grouped[day] = {};
+                                    if (!grouped[day][hub]) {
+                                        grouped[day][hub] = {
+                                            hub, ofd: 0,
+                                            ofd7am: 0, emo7am: 0,
+                                            ofd8am: 0, emo8am: 0,
+                                            ofd9am: 0, emo9am: 0,
+                                            ofd10am: 0, emo10am: 0,
+                                            ofd12pm: 0, emo12pm: 0,
+                                            ofd2pm: 0, emo2pm: 0,
+                                            ofd4pm: 0, emo4pm: 0,
+                                            ofdafter4pm: 0, emoafter4pm: 0
+                                        };
+                                    }
+
+                                    const hubRec = grouped[day][hub];
+                                    hubRec.ofd += parseNum(r[2] || r[1]);
+                                    hubRec.ofd7am += parseNum(r[4] || r[2]);
+                                    hubRec.ofd8am += parseNum(r[5] || r[4]);
+                                    hubRec.ofd9am += parseNum(r[6] || r[6]);
+                                    hubRec.ofd10am += parseNum(r[7] || r[8]);
+                                    hubRec.ofd12pm += parseNum(r[9] || r[10]);
+                                    hubRec.ofd2pm += parseNum(r[11] || r[12]);
+                                    hubRec.ofd4pm += parseNum(r[13] || r[14]);
+                                    hubRec.ofdafter4pm += parseNum(r[15] || r[16]);
+                                }
+
+                                const finalMap = {};
+                                Object.keys(grouped).forEach(d => {
+                                    finalMap[d] = Object.values(grouped[d]).map((item, idx) => {
+                                        const cum7 = item.ofd7am;
+                                        const cum8 = cum7 + item.ofd8am;
+                                        const cum9 = cum8 + item.ofd9am;
+                                        const cum10 = cum9 + item.ofd10am;
+                                        const cum12 = cum10 + item.ofd12pm;
+                                        const cum2 = cum12 + item.ofd2pm;
+                                        const cum4 = cum2 + item.ofd4pm;
+                                        const cumAfter4 = cum4 + item.ofdafter4pm;
+
+                                        const calcCumPct = (cumVal) => item.ofd > 0 ? (cumVal / item.ofd) * 100 : 0;
+
+                                        const emo7 = calcCumPct(cum7);
+                                        const emo8 = calcCumPct(cum8);
+                                        const emo9 = calcCumPct(cum9);
+                                        const emo10 = calcCumPct(cum10);
+                                        const emo12 = calcCumPct(cum12);
+                                        const emo2 = calcCumPct(cum2);
+                                        const emo4 = calcCumPct(cum4);
+                                        const emoAfter4 = calcCumPct(cumAfter4);
+
+                                        const target95 = Math.ceil(item.ofd * 0.95);
+                                        const gap12pm = emo12 >= 95 ? 0 : Math.max(0, target95 - cum12);
+
+                                        let velocity = 'High Risk';
+                                        if (emo10 >= 95) velocity = 'Target Met';
+                                        else if (emo10 >= 75) velocity = 'On Track';
+                                        else if (emo10 >= 50) velocity = 'Moderate';
+
+                                        return {
+                                            id: `2026-${d}-${idx}`,
+                                            hub: item.hub,
+                                            ofd: item.ofd,
+                                            gap12pm,
+                                            velocity,
+                                            cumOfd8am: cum8,
+                                            cumOfd10am: cum10,
+                                            cumOfd12pm: cum12,
+                                            ofd7am: item.ofd7am, emo7am: emo7,
+                                            ofd8am: item.ofd8am, emo8am: emo8,
+                                            ofd9am: item.ofd9am, emo9am: emo9,
+                                            ofd10am: item.ofd10am, emo10am: emo10,
+                                            ofd12pm: item.ofd12pm, emo12pm: emo12,
+                                            ofd2pm: item.ofd2pm, emo2pm: emo2,
+                                            ofd4pm: item.ofd4pm, emo4pm: emo4,
+                                            ofdafter4pm: item.ofdafter4pm, emoafter4pm: emoAfter4
+                                        };
+                                    });
+                                });
+
+                                if (Object.keys(finalMap).length > 0) {
+                                    setDataByDay(prev => ({ ...prev, ...finalMap }));
+                                }
+                            }
+                        });
+                    })
+                    .catch(() => {});
+            };
+
+            useEffect(() => {
+                fetchSheetData();
+                const interval = setInterval(fetchSheetData, 30000); // Fast 30-sec auto-poll for new entries
+                return () => clearInterval(interval);
+            }, []);
+
+            // Live Clock for TV Mode
+            useEffect(() => {
+                const updateClock = () => {
+                    const now = new Date();
+                    setCurrentTime(now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }));
+                };
+                updateClock();
+                const clockInterval = setInterval(updateClock, 1000);
+                return () => clearInterval(clockInterval);
+            }, []);
+
+            // Auto-scrolling for TV Display Mode
+            useEffect(() => {
+                let scrollInterval = null;
+                if (isTvMode && isAutoScrolling) {
+                    let direction = 1;
+                    scrollInterval = setInterval(() => {
+                        const el = tvScrollRef.current;
+                        if (!el) return;
+                        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 5) {
+                            direction = -1;
+                        } else if (el.scrollTop <= 5) {
+                            direction = 1;
+                        }
+                        el.scrollBy({ top: direction * 1.5, behavior: 'smooth' });
+                    }, 40);
+                }
+                return () => {
+                    if (scrollInterval) clearInterval(scrollInterval);
+                };
+            }, [isTvMode, isAutoScrolling]);
+
+            // ESC key to exit TV mode
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.key === 'Escape' && isTvMode) {
+                        setIsTvMode(false);
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [isTvMode]);
+
+            const activeDay = selectedDay !== null ? selectedDay : (sheetDayNumber || 1);
+
+            const displayedHubs = useMemo(() => {
+                // 1. If viewing the active sheet date and live table data exists, show live EMO Table data
+                if (sheetDayNumber === activeDay && tableData && tableData.length > 0) {
+                    return tableData;
+                }
+
+                // 2. If viewing a date stored in EMO 2026 multi-day tab
+                if (dataByDay[activeDay] && dataByDay[activeDay].length > 0) {
+                    return dataByDay[activeDay];
+                }
+
+                // 3. STRICT RULE: Do NOT fallback to other dates! If date is not in sheet, show exact 0 records
+                return createEmptyHubRecords(activeDay);
+            }, [tableData, dataByDay, selectedDay, sheetDayNumber, activeDay]);
+
+            // Overall Summary KPI Stats with exact cumulative calculations
+            const kpiStats = useMemo(() => {
+                const totalOfd = displayedHubs.reduce((acc, h) => acc + h.ofd, 0);
+                const cum8 = displayedHubs.reduce((acc, h) => acc + (h.cumOfd8am !== undefined ? h.cumOfd8am : (h.ofd7am + h.ofd8am)), 0);
+                const cum10 = displayedHubs.reduce((acc, h) => acc + (h.cumOfd10am !== undefined ? h.cumOfd10am : (h.ofd7am + h.ofd8am + h.ofd9am + h.ofd10am)), 0);
+                const cum12 = displayedHubs.reduce((acc, h) => acc + (h.cumOfd12pm !== undefined ? h.cumOfd12pm : (h.ofd7am + h.ofd8am + h.ofd9am + h.ofd10am + h.ofd12pm)), 0);
+
+                return {
+                    totalOfd,
+                    activeCount: displayedHubs.length,
+                    emo8am: totalOfd > 0 ? (cum8 / totalOfd) * 100 : 0,
+                    emo10am: totalOfd > 0 ? (cum10 / totalOfd) * 100 : 0,
+                    emo12pm: totalOfd > 0 ? (cum12 / totalOfd) * 100 : 0
+                };
+            }, [displayedHubs]);
+
+            // Top 3 Hubs at 8 AM
+            const top8amHubs = useMemo(() => {
+                return [...displayedHubs]
+                    .filter(h => h.ofd > 0 && h.emo8am > 0)
+                    .sort((a, b) => b.emo8am - a.emo8am)
+                    .slice(0, 3);
+            }, [displayedHubs]);
+
+            // Top 3 Hubs at 10 AM
+            const top10amHubs = useMemo(() => {
+                return [...displayedHubs]
+                    .filter(h => h.ofd > 0 && h.emo10am > 0)
+                    .sort((a, b) => b.emo10am - a.emo10am)
+                    .slice(0, 3);
+            }, [displayedHubs]);
+
+            // Critical Hubs (< 50% at 10 AM, sorted lowest first)
+            const criticalHubsList = useMemo(() => {
+                return [...displayedHubs]
+                    .filter(h => h.ofd > 0 && h.emo10am > 0 && h.emo10am < 50)
+                    .sort((a, b) => a.emo10am - b.emo10am)
+                    .slice(0, 3);
+            }, [displayedHubs]);
+
+            const filteredData = useMemo(() => {
+                let list = [...displayedHubs];
+                if (searchTerm) {
+                    const q = searchTerm.toLowerCase();
+                    list = list.filter(item => item.hub.toLowerCase().includes(q));
+                }
+                if (quickFilter === 'TOP') list = list.filter(item => computeVelocity(item) === 'Target Met');
+                else if (quickFilter === 'CRITICAL') list = list.filter(item => computeVelocity(item) === 'High Risk');
+
+                if (sortConfig) {
+                    list.sort((a, b) => {
+                        if (sortConfig.key === 'velocity') {
+                            const vOrder = { 'Target Met': 4, 'On Track': 3, 'Moderate': 2, 'High Risk': 1 };
+                            const valA = vOrder[computeVelocity(a)] || 0;
+                            const valB = vOrder[computeVelocity(b)] || 0;
+                            return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
+                        }
+                        if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
+                        if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
+                        return 0;
+                    });
+                }
+                return list;
+            }, [displayedHubs, searchTerm, sortConfig, quickFilter]);
+
+            const requestSort = (key) => {
+                let direction = 'asc';
+                if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
+                setSortConfig({ key, direction });
+            };
+
+            const getSortIcon = (key) => {
+                if (!sortConfig || sortConfig.key !== key) return <ArrowUpDown className="w-3 h-3 ml-1 text-slate-500 inline-block shrink-0" />;
+                return sortConfig.direction === 'asc'
+                    ? <ChevronUp className="w-3 h-3 ml-1 text-cyan-400 inline-block shrink-0" />
+                    : <ChevronDown className="w-3 h-3 ml-1 text-cyan-400 inline-block shrink-0" />;
+            };
+
+            return (
+                <div className="space-y-4">
+                    <HubDetailModal hub={selectedHub} onClose={() => setSelectedHub(null)} />
+
+                    {/* TV Mode Fullscreen Overlay */}
+                    {isTvMode && (
+                        <div className="fixed inset-0 z-[999] bg-[#070b14] text-slate-100 flex flex-col p-4 sm:p-6 select-none overflow-hidden animate-fade-in font-sans">
+                            {/* TV Mode Header */}
+                            <div className="flex items-center justify-between gap-4 pb-4 border-b border-slate-800 shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.3)] shrink-0">
+                                        <TvIcon className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+                                            <h1 className="text-xl sm:text-2xl font-black text-cyan-400 tracking-wider uppercase m-0 whitespace-nowrap">
+                                                LIVE HUB MONITOR
+                                            </h1>
+                                            {/* Live Clock directly beside LIVE HUB MONITOR */}
+                                            <div className="flex items-center gap-2 bg-[#0c1424] border border-cyan-500/30 px-3 py-1 rounded-xl shadow-[0_0_12px_rgba(6,182,212,0.15)]">
+                                                <span className="text-base sm:text-lg font-black text-cyan-300 font-mono-num tracking-wide">
+                                                    {currentTime}
+                                                </span>
+                                                <span className="text-[9px] font-bold text-slate-400 tracking-widest uppercase">
+                                                    LIVE CLOCK
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Status badges row */}
+                                        <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
+                                            <span className="text-slate-400 font-mono-num font-semibold">
+                                                DATE: 2026-09-{String(activeDay).padStart(2, '0')}
+                                            </span>
+                                            <button 
+                                                onClick={() => setIsAutoScrolling(!isAutoScrolling)}
+                                                className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border transition-colors ${
+                                                    isAutoScrolling 
+                                                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.2)]' 
+                                                        : 'bg-slate-800 text-slate-400 border-slate-700'
+                                                }`}
+                                                title="Click to toggle auto-scrolling"
+                                            >
+                                                <span className={`w-2 h-2 rounded-full ${isAutoScrolling ? 'bg-cyan-400 animate-ping' : 'bg-slate-500'}`}></span>
+                                                {isAutoScrolling ? 'AUTO-SCROLLING' : 'SCROLL PAUSED'}
+                                            </button>
+                                            <span className="bg-[#0f172a] border border-slate-800 px-2.5 py-0.5 rounded-md font-bold text-slate-300">
+                                                Total OFD: <strong className="text-white font-mono-num">{formatNumber(kpiStats.totalOfd)}</strong>
+                                            </span>
+                                            <span className="bg-[#0f172a] border border-slate-800 px-2.5 py-0.5 rounded-md font-bold text-slate-300">
+                                                8 AM: <strong className="text-amber-400 font-mono-num">{formatPercent(kpiStats.emo8am)}</strong>
+                                            </span>
+                                            <span className="bg-[#0f172a] border border-slate-800 px-2.5 py-0.5 rounded-md font-bold text-slate-300">
+                                                10 AM: <strong className="text-cyan-400 font-mono-num">{formatPercent(kpiStats.emo10am)}</strong>
+                                            </span>
+                                            <span className="bg-[#0f172a] border border-slate-800 px-2.5 py-0.5 rounded-md font-bold text-slate-300">
+                                                12 PM: <strong className="text-emerald-400 font-mono-num">{formatPercent(kpiStats.emo12pm)}</strong>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Exit TV Mode button on top-right */}
+                                <button
+                                    onClick={() => setIsTvMode(false)}
+                                    className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/40 hover:border-rose-500 rounded-xl text-xs font-bold transition-all shadow-[0_0_15px_rgba(244,63,94,0.15)] active:scale-95 cursor-pointer whitespace-nowrap self-start"
+                                >
+                                    Exit TV Mode
+                                </button>
+                            </div>
+
+                            {/* TV Mode Big Screen Table */}
+                            <div 
+                                ref={tvScrollRef}
+                                className="flex-1 overflow-y-auto mt-4 rounded-2xl border border-slate-800/90 bg-[#090e1a] custom-scrollbar"
+                            >
+                                <table className="w-full text-left whitespace-nowrap border-collapse">
+                                    <thead className="sticky top-0 z-20 bg-[#0c1424] text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                                        <tr>
+                                            <th className="px-6 py-4">HUB LOCATION</th>
+                                            <th className="px-6 py-4 text-right">TOTAL OFD</th>
+                                            <th className="px-6 py-4 text-right">8 AM EMO</th>
+                                            <th className="px-6 py-4 text-right">10 AM EMO</th>
+                                            <th className="px-6 py-4 text-right">12 PM EMO</th>
+                                            <th className="px-6 py-4 text-center">VELOCITY STATE</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-800/60 text-sm font-semibold">
+                                        {displayedHubs.map(hub => {
+                                            const velocityState = computeVelocity(hub);
+                                            return (
+                                                <tr 
+                                                    key={`tv-${hub.id}`} 
+                                                    className="hover:bg-slate-800/40 transition-colors"
+                                                >
+                                                    <td className="px-6 py-4 font-bold text-white tracking-wide text-base">
+                                                        {hub.hub}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right text-white font-mono-num font-bold text-base">
+                                                        {formatNumber(hub.ofd)}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right font-mono-num font-bold text-amber-400 text-base">
+                                                        {formatPercent(hub.emo8am)}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right font-mono-num font-bold text-cyan-400 text-base">
+                                                        {formatPercent(hub.emo10am)}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right font-mono-num font-bold text-emerald-400 text-base">
+                                                        {formatPercent(hub.emo12pm)}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                                                            velocityState === 'Target Met'
+                                                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                                                : velocityState === 'On Track'
+                                                                ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30'
+                                                                : velocityState === 'Moderate'
+                                                                ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                                                                : velocityState === 'High Risk'
+                                                                ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                                                                : 'bg-slate-800 text-slate-400 border border-slate-700'
+                                                        }`}>
+                                                            {velocityState !== '-' && (
+                                                                <span className={`w-2 h-2 rounded-full ${
+                                                                    velocityState === 'Target Met' ? 'bg-emerald-400' :
+                                                                    velocityState === 'On Track' ? 'bg-cyan-400' :
+                                                                    velocityState === 'Moderate' ? 'bg-amber-400' : 'bg-rose-400'
+                                                                }`}></span>
+                                                            )}
+                                                            {velocityState}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Header Row */}
+                    <div className="bg-[#0b1220]/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                        <div className="flex items-center gap-3.5">
+                            {/* Glowing Pulse Logo */}
+                            <div className="w-12 h-12 p-2.5 bg-gradient-to-tr from-cyan-600 to-blue-500 rounded-2xl flex items-center justify-center shadow-[0_0_24px_rgba(6,182,212,0.35)] cursor-pointer shrink-0">
+                                <PulseIcon className="w-6 h-6 text-white stroke-[2.5]" />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-3 flex-nowrap">
+                                    <h1 className="text-lg sm:text-2xl font-extrabold text-white tracking-wide uppercase m-0 leading-tight whitespace-nowrap">
+                                        EMO HUB WISE
+                                    </h1>
+                                    <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-full shrink-0">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
+                                        <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider whitespace-nowrap">
+                                            LIVE ({displayedHubs.length} HUBS)
+                                        </span>
+                                    </div>
+                                    {/* Reload Icon Button */}
+                                    <button 
+                                        onClick={fetchSheetData} 
+                                        className="w-7 h-7 flex items-center justify-center rounded-xl bg-[#0e172a] hover:bg-cyan-500/20 border border-slate-800 hover:border-cyan-500/40 text-cyan-400 transition-all cursor-pointer shadow-sm active:scale-95 shrink-0" 
+                                        title={`Reload live sheet data. Last sync: ${lastUpdated || 'Pending'}`}
+                                    >
+                                        <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+                                    </button>
+                                </div>
+
+                                {/* Sarfaraj Nawab Span - Prominent & Clearly Visible */}
+                                <div className="mt-1.5 inline-flex items-center gap-2 px-2.5 py-1 bg-cyan-500/10 border border-cyan-500/30 rounded-xl shadow-[0_0_12px_rgba(6,182,212,0.15)] whitespace-nowrap">
+                                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                                    <span className="text-xs sm:text-sm font-extrabold text-cyan-300 tracking-wider uppercase">
+                                        Sarfaraj Nawab Span
+                                    </span>
+                                </div>
+
+                                {/* TV Mode Toggle Button directly under LIVE */}
+                                <div className="mt-2 flex items-center gap-2">
+                                    <button
+                                        onClick={() => setIsTvMode(true)}
+                                        className="flex items-center gap-1.5 px-3 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 hover:border-cyan-500/60 rounded-xl text-cyan-400 text-xs font-bold transition-all shadow-[0_0_12px_rgba(6,182,212,0.15)] active:scale-95 cursor-pointer"
+                                        title="Open full-screen Live TV Monitor with auto-scrolling"
+                                    >
+                                        <TvIcon className="w-3.5 h-3.5" />
+                                        <span>TV Mode (Live Monitor)</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Top Controls: Date Selectors & Search moved up beside EMO HUB WISE */}
+                        <div className="flex flex-row flex-wrap sm:flex-nowrap items-center gap-2.5 w-full lg:w-auto">
+                            {/* Date Selector Dropdown */}
+                            <div className="flex items-center bg-[#0e172a] border border-slate-800 px-3 py-2 rounded-2xl shrink-0">
+                                <CalendarIcon className="w-4 h-4 text-cyan-400 mr-2 shrink-0" />
+                                <span className="text-[11px] font-bold text-slate-400 mr-2 uppercase tracking-wider">Date:</span>
+                                <select 
+                                    value={activeDay} 
+                                    onChange={(e) => setSelectedDay(parseInt(e.target.value, 10))}
+                                    className="bg-transparent text-xs font-bold text-cyan-300 focus:outline-none cursor-pointer pr-1"
+                                >
+                                    {Array.from({ length: 30 }, (_, i) => i + 1).map(d => {
+                                        const hasData = (d === sheetDayNumber && tableData.length > 0) || (dataByDay[d] && dataByDay[d].length > 0 && dataByDay[d].some(h => h.ofd > 0));
+                                        return (
+                                            <option key={d} value={d} className="bg-[#0b1220] text-white">
+                                                {String(d).padStart(2, '0')}/09/2026 {hasData ? '✓ (Live Data)' : '(0 OFD - Pending)'}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                            </div>
+
+                            {/* Search Input */}
+                            <div className="relative w-full sm:w-56">
+                                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search hub..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 bg-[#0e172a] border border-slate-800 rounded-2xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+
+                    {/* 4 Executive KPI Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                        {/* Card 1: TOTAL OFD */}
+                        <div className="bg-[#0b1220]/85 border border-slate-800/80 rounded-2xl p-4 flex justify-between items-center relative overflow-hidden">
+                            <div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">TOTAL OFD</div>
+                                <div className="text-2xl font-black text-white font-mono-num mt-0.5">{formatNumber(kpiStats.totalOfd)}</div>
+                                <div className="text-[11px] font-semibold text-cyan-400 mt-1">{kpiStats.activeCount} Active Hubs</div>
+                            </div>
+                            <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+                                <PulseIcon className="w-5 h-5 text-cyan-400" />
+                            </div>
+                        </div>
+
+                        {/* Card 2: 8 AM EMO */}
+                        <div className="bg-[#0b1220]/85 border border-slate-800/80 rounded-2xl p-4 flex justify-between items-center relative overflow-hidden">
+                            <div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">8 AM EMO</div>
+                                <div className="text-2xl font-black text-amber-400 font-mono-num mt-0.5">{formatPercent(kpiStats.emo8am)}</div>
+                            </div>
+                            <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                                <Clock className="w-5 h-5 text-amber-400" />
+                            </div>
+                        </div>
+
+                        {/* Card 3: 10 AM EMO */}
+                        <div className="bg-[#0b1220]/85 border border-slate-800/80 rounded-2xl p-4 flex justify-between items-center relative overflow-hidden">
+                            <div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">10 AM EMO</div>
+                                <div className="text-2xl font-black text-cyan-400 font-mono-num mt-0.5">{formatPercent(kpiStats.emo10am)}</div>
+                            </div>
+                            <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+                                <Trophy className="w-5 h-5 text-cyan-400" />
+                            </div>
+                        </div>
+
+                        {/* Card 4: 12 PM EMO */}
+                        <div className="bg-[#0b1220]/85 border border-slate-800/80 rounded-2xl p-4 flex justify-between items-center relative overflow-hidden">
+                            <div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">12 PM EMO</div>
+                                <div className="text-2xl font-black text-emerald-400 font-mono-num mt-0.5">{formatPercent(kpiStats.emo12pm)}</div>
+                            </div>
+                            <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                                <TrendingUp className="w-5 h-5 text-emerald-400" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {}
+                    {/* 3 Performance & Critical Leaderboards Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                        {/* 1. 8 AM Top Performers */}
+                        <div className="bg-[#0b1220]/90 border border-cyan-500/20 hover:border-cyan-500/40 rounded-2xl p-4 shadow-lg transition-all flex flex-col justify-between">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+                                    <Clock className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-extrabold text-white tracking-wide m-0 leading-tight">
+                                        8 AM Top Performers
+                                    </h3>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                {top8amHubs.length > 0 ? (
+                                    top8amHubs.map(hub => (
+                                        <div
+                                            key={`top8-${hub.id}`}
+                                            onClick={() => setSelectedHub(hub)}
+                                            className="flex items-center justify-between p-2.5 rounded-xl bg-[#0e172a] border border-slate-800/80 hover:border-cyan-500/40 hover:bg-[#131d33] cursor-pointer transition-all group"
+                                            title="Click to view hub analytics"
+                                        >
+                                            <span className="text-xs font-bold text-slate-200 group-hover:text-white truncate pr-2">
+                                                {hub.hub}
+                                            </span>
+                                            <span className="text-xs font-black font-mono-num text-cyan-400 shrink-0">
+                                                {formatPercent(hub.emo8am)}
+                                            </span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-xs text-slate-500 text-center py-4">No data available</div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 2. 10 AM Top Performers */}
+                        <div className="bg-[#0b1220]/90 border border-emerald-500/20 hover:border-emerald-500/40 rounded-2xl p-4 shadow-lg transition-all flex flex-col justify-between">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                                    <Trophy className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-extrabold text-white tracking-wide m-0 leading-tight">
+                                        10 AM Top Performers
+                                    </h3>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                {top10amHubs.length > 0 ? (
+                                    top10amHubs.map(hub => (
+                                        <div
+                                            key={`top10-${hub.id}`}
+                                            onClick={() => setSelectedHub(hub)}
+                                            className="flex items-center justify-between p-2.5 rounded-xl bg-[#0e172a] border border-slate-800/80 hover:border-emerald-500/40 hover:bg-[#131d33] cursor-pointer transition-all group"
+                                            title="Click to view hub analytics"
+                                        >
+                                            <span className="text-xs font-bold text-slate-200 group-hover:text-white truncate pr-2">
+                                                {hub.hub}
+                                            </span>
+                                            <span className="text-xs font-black font-mono-num text-emerald-400 shrink-0">
+                                                {formatPercent(hub.emo10am)}
+                                            </span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-xs text-slate-500 text-center py-4">No data available</div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 3. Critical Hubs (<50%) */}
+                        <div className="bg-[#0b1220]/90 border border-rose-500/20 hover:border-rose-500/40 rounded-2xl p-4 shadow-lg transition-all flex flex-col justify-between">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                                    <AlertCircle className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-extrabold text-white tracking-wide m-0 leading-tight">
+                                        Critical Hubs (&lt;50%)
+                                    </h3>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                {criticalHubsList.length > 0 ? (
+                                    criticalHubsList.map(hub => (
+                                        <div
+                                            key={`crit-${hub.id}`}
+                                            onClick={() => setSelectedHub(hub)}
+                                            className="flex items-center justify-between p-2.5 rounded-xl bg-[#0e172a] border border-slate-800/80 hover:border-rose-500/40 hover:bg-[#131d33] cursor-pointer transition-all group"
+                                            title="Click to view hub analytics"
+                                        >
+                                            <span className="text-xs font-bold text-slate-200 group-hover:text-white truncate pr-2">
+                                                {hub.hub}
+                                            </span>
+                                            <span className="text-xs font-black font-mono-num text-rose-400 shrink-0">
+                                                {formatPercent(hub.emo10am)}
+                                            </span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-xs text-emerald-400 text-center py-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                                        ✓ No critical hubs (&lt;50%)
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Filter Tabs & Record Counter */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setQuickFilter('ALL')}
+                                className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                                    quickFilter === 'ALL'
+                                        ? 'bg-cyan-500 text-slate-950 font-black shadow-[0_0_12px_rgba(6,182,212,0.35)]'
+                                        : 'bg-[#0b1220] border border-slate-800 text-slate-400 hover:text-white'
+                                }`}
+                            >
+                                All Hubs ({displayedHubs.length})
+                            </button>
+                            <button
+                                onClick={() => setQuickFilter('TOP')}
+                                className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                                    quickFilter === 'TOP'
+                                        ? 'bg-emerald-500 text-slate-950 font-black shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+                                        : 'bg-[#0b1220] border border-slate-800 text-slate-400 hover:text-emerald-400'
+                                }`}
+                            >
+                                <Trophy className="w-3.5 h-3.5" /> Top Performers (&gt;95%)
+                            </button>
+                            <button
+                                onClick={() => setQuickFilter('CRITICAL')}
+                                className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                                    quickFilter === 'CRITICAL'
+                                        ? 'bg-rose-500 text-white font-black shadow-[0_0_12px_rgba(244,63,94,0.35)]'
+                                        : 'bg-[#0b1220] border border-slate-800 text-slate-400 hover:text-rose-400'
+                                }`}
+                            >
+                                <AlertCircle className="w-3.5 h-3.5" /> Critical Escalation (&lt;50%)
+                            </button>
+                        </div>
+
+                        <div className="text-[11px] font-bold text-slate-400 tracking-wider uppercase">
+                            SHOWING {filteredData.length} RECORDS (2026-09-{String(activeDay).padStart(2, '0')})
+                        </div>
+                    </div>
+
+                    <div className="bg-[#0b1220]/90 border border-slate-800/90 rounded-3xl overflow-hidden shadow-2xl">
+                        <div className="overflow-x-auto max-h-[62vh] custom-scrollbar">
+                            <table className="w-full text-left whitespace-nowrap border-collapse">
+                                <thead className="sticky top-0 z-30 bg-[#0c1424] text-[10px] uppercase font-bold tracking-wider text-slate-400 border-b border-slate-800">
+                                    <tr>
+                                        <th className="px-5 py-4 cursor-pointer hover:text-cyan-400 sticky left-0 z-40 bg-[#0c1424] sticky-col" onClick={() => requestSort('hub')}>
+                                            <div className="flex items-center">HUB LOCATION {getSortIcon('hub')}</div>
+                                        </th>
+                                        <th className="px-4 py-4 text-right cursor-pointer hover:text-cyan-400" onClick={() => requestSort('ofd')}>
+                                            <div className="flex items-center justify-end">TOTAL OFD {getSortIcon('ofd')}</div>
+                                        </th>
+                                        <th className="px-4 py-4 text-center cursor-pointer hover:text-cyan-400" onClick={() => requestSort('velocity')}>
+                                            <div className="flex items-center justify-center">VELOCITY PREDICTION {getSortIcon('velocity')}</div>
+                                        </th>
+
+                                        {timeSlots.map(slot => (
+                                            <React.Fragment key={slot.key}>
+                                                <th className="px-3 py-4 text-right cursor-pointer hover:text-cyan-400" onClick={() => requestSort(`ofd${slot.key}`)}>
+                                                    <div className="flex items-center justify-end">{slot.label} OFD {getSortIcon(`ofd${slot.key}`)}</div>
+                                                </th>
+                                                <th className="px-3 py-4 text-right cursor-pointer hover:text-cyan-400" onClick={() => requestSort(`emo${slot.key}`)}>
+                                                    <div className="flex items-center justify-end">{slot.label} EMO% {getSortIcon(`emo${slot.key}`)}</div>
+                                                </th>
+                                            </React.Fragment>
+                                        ))}
+                                    </tr>
+                                </thead>
+
+                                <tbody className="divide-y divide-slate-800/60 text-xs">
+                                    {filteredData.length > 0 ? (
+                                        filteredData.map(row => {
+                                            const isCritical = (parseFloat(row.emo10am) || 0) > 0 && (parseFloat(row.emo10am) || 0) < 50;
+                                            const velocity = computeVelocity(row);
+
+                                            return (
+                                                <tr
+                                                    key={row.id}
+                                                    onClick={() => setSelectedHub(row)}
+                                                    className={`cyber-row cursor-pointer ${isCritical ? 'critical-glow' : ''}`}
+                                                >
+                                                    {/* Hub Name Column */}
+                                                    <td className="px-5 py-3.5 font-bold text-white sticky left-0 z-10 bg-[#0b1220] sticky-col">
+                                                        <div className="flex items-center gap-2">
+                                                            {isCritical && <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>}
+                                                            <span className="hover:text-cyan-400 transition-colors font-mono-num">{row.hub}</span>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Total OFD */}
+                                                    <td className="px-4 py-3.5 text-right font-black text-slate-300 font-mono-num">
+                                                        {formatNumber(row.ofd)}
+                                                    </td>
+
+                                                    {/* Velocity Prediction */}
+                                                    <td className="px-4 py-3.5 text-center">
+                                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold ${
+                                                            velocity === 'Target Met'
+                                                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                                                : velocity === 'On Track'
+                                                                ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30'
+                                                                : velocity === 'Moderate'
+                                                                ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                                                                : velocity === 'High Risk'
+                                                                ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                                                                : 'bg-slate-800/60 text-slate-400 border border-slate-700/60'
+                                                        }`}>
+                                                            {velocity !== '-' && (
+                                                                <span className={`w-1.5 h-1.5 rounded-full ${
+                                                                    velocity === 'Target Met' ? 'bg-emerald-400' :
+                                                                    velocity === 'On Track' ? 'bg-cyan-400' :
+                                                                    velocity === 'Moderate' ? 'bg-amber-400' : 'bg-rose-500'
+                                                                }`}></span>
+                                                            )}
+                                                            {velocity}
+                                                        </span>
+                                                    </td>
+
+                                                    {/* Dynamic Time Slot Columns (7AM to After 4PM) */}
+                                                    {timeSlots.map(slot => {
+                                                        const slotOfd = row[`ofd${slot.key}`] || 0;
+                                                        const slotEmo = row[`emo${slot.key}`] || 0;
+
+                                                        return (
+                                                            <React.Fragment key={slot.key}>
+                                                                <td className="px-3 py-3.5 text-right text-slate-400 font-mono-num">
+                                                                    {slotOfd === 0 ? <span className="text-slate-600">-</span> : formatNumber(slotOfd)}
+                                                                </td>
+                                                                <td className="px-3 py-3.5 text-right">
+                                                                    <span className={`inline-block px-2 py-0.5 rounded-lg text-[10.5px] font-mono-num font-bold ${
+                                                                        slotEmo === 0 ? 'text-slate-500 bg-slate-800/40' :
+                                                                        slotEmo >= 95 ? 'text-emerald-400 bg-emerald-500/15 border border-emerald-500/30' :
+                                                                        slotEmo >= 80 ? 'text-cyan-400 bg-cyan-500/15 border border-cyan-500/30' :
+                                                                        slotEmo >= 50 ? 'text-amber-400 bg-amber-500/15 border border-amber-500/30' :
+                                                                        'text-rose-400 bg-rose-500/15 border border-rose-500/30'
+                                                                    }`}>
+                                                                        {formatPercent(slotEmo)}
+                                                                    </span>
+                                                                </td>
+                                                            </React.Fragment>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            );
+                                        })
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="20" className="px-6 py-20 text-center text-slate-400">
+                                                {isFetching ? "Syncing live data from EMO Table..." : "No hub records found for the selected date."}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<HubEMODashboard />);
+    </script>
+</body>
+</html>
